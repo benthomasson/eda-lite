@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - community.general.slack:
+        token: "{{slack_token}}"
+        msg: hello  
+
+
+...
+
