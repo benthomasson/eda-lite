@@ -13,4 +13,9 @@ push:
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 
 
+run:
+	docker run -it --rm -p 8000:8000 $(IMAGE_NAME):$(IMAGE_TAG)
+
+shell:
+	docker run -it --rm $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 

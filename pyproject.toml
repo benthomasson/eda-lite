@@ -14,3 +14,10 @@ line_length = 79
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[project]
+name = "eda-ifthisthenthat"
+version = "0.0.1"
+dependencies = [
+    "fastapi[all]",
+]
