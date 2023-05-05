@@ -62,15 +62,19 @@ class Rulebook(BaseModel):
 class Inventory(BaseModel):
 
     inventory: str
+
+
 # globals
 
 enable = False
 ruleset = Ruleset(name="ifthisthenthat", rules=[], sources=[])
 rulebook = Rulebook(rulesets=[ruleset])
 extravars = {}
-inventory = Inventory(inventory='')
+inventory = Inventory(inventory="")
 rulebook_task = None
 log_lines = []
+events = []
+actions = []
 
 
 def build_rulebook():
@@ -110,6 +114,7 @@ def build_rulebook():
     print(yaml.safe_dump(data, default_flow_style=False))
     return data
 
+
 def load_extravars():
     global extravars
 
@@ -119,6 +124,7 @@ def load_extravars():
 
             print(extravars)
 
+
 def load_inventory():
     global inventory
 
@@ -127,6 +133,7 @@ def load_inventory():
             inventory = Inventory(inventory=f.read())
 
             print(inventory)
+
 
 def load_rulebook():
     global rulebook
@@ -143,13 +150,25 @@ def load_rulebook():
             ruleset_data = rulebook_data[0]
             for source in ruleset_data["sources"]:
                 source_type = list(source.keys())[0]
-                sources.append(Source(source_type=source_type,
-                                      source_args=source[source_type]))
+                sources.append(
+                    Source(
+                        source_type=source_type,
+                        source_args=source[source_type],
+                    )
+                )
             for rule in ruleset_data["rules"]:
-                rules.append(Rule(name=rule["name"],
-                                  condition=Condition(condition=rule["condition"]),
-                                  action=Action(name=rule["action"]["run_module"]["name"],
-                                                module_args=rule["action"]["run_module"]["module_args"])))
+                rules.append(
+                    Rule(
+                        name=rule["name"],
+                        condition=Condition(condition=rule["condition"]),
+                        action=Action(
+                            name=rule["action"]["run_module"]["name"],
+                            module_args=rule["action"]["run_module"][
+                                "module_args"
+                            ],
+                        ),
+                    )
+                )
 
         ruleset = Ruleset(name="ifthisthenthat", rules=rules, sources=sources)
         rulebook = Rulebook(rulesets=[ruleset])
@@ -194,13 +213,19 @@ app.add_middleware(
 async def get_available_modules():
     return {"modules": ["community.general.slack"]}
 
+
 # Get the list of available sources
 @app.get("/available-sources")
 async def get_available_sources():
-    return {"sources": [{"name": "ansible.eda.range", "args": {"limit": "int", "delay": "int"}},
-                        {"name": "ansible.eda.webhook", "args": {}},
-                       ]}
-
+    return {
+        "sources": [
+            {
+                "name": "ansible.eda.range",
+                "args": {"limit": "int", "delay": "int"},
+            },
+            {"name": "ansible.eda.webhook", "args": {}},
+        ]
+    }
 
 
 # Get the list of sources
@@ -213,6 +238,7 @@ async def get_sources():
 @app.get("/rules")
 async def get_rules():
     return {"rules": rulebook.rulesets[0].rules}
+
 
 # Enable rulebook
 @app.post("/enable")
@@ -268,10 +294,12 @@ async def set_inventory(new_inventory: Inventory):
 async def get_inventory():
     return inventory
 
+
 # Get the rulebook
 @app.get("/rulebook")
 async def get_rulebook():
     return build_rulebook()
+
 
 # Add a source
 @app.post("/sources")
@@ -294,9 +322,21 @@ async def add_rule(rule: Rule):
 
 
 # Get log lines
-@app.get("/logs")
-async def get_logs():
-    return {"logs": log_lines}
+@app.get("/log")
+async def get_log():
+    return {"log_lines": log_lines}
+
+
+# Get actions
+@app.get("/action-log")
+async def get_actions():
+    return {"actions": actions}
+
+
+# Get events
+@app.get("/ansible-event-log")
+async def get_events():
+    return {"events": events}
 
 
 @app.websocket("/ws")
@@ -311,6 +351,10 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             print("websocket:", data, type(data))
             message = json.loads(data)
+            if message["type"] == "AnsibleEvent":
+                events.append(message)
+            if message["type"] == "Action":
+                actions.append(message)
             if message["type"] == "Worker":
                 await send(
                     {
@@ -347,6 +391,8 @@ async def run_rulebook():
 
     global rulebook_task
     global log_lines
+    global actions
+    global events
 
     if rulebook_task:
         rulebook_task.cancel()
@@ -355,6 +401,8 @@ async def run_rulebook():
         return
 
     log_lines = []
+    actions = []
+    events = []
 
     activation_id = str(uuid.uuid4())
 
