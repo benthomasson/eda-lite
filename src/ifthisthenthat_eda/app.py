@@ -228,6 +228,16 @@ async def get_available_sources():
     }
 
 
+# Get the list of available conditions for a given source
+@app.get("/available-conditions/{source}")
+async def get_available_conditions(source: str):
+    return {"conditions": [{"name": "first", "args": {}},
+                           {"name": "ith element", "args": {"i": "int"}},
+                           {"name": "after ith element", "args": {"i": "int"}},
+                           {"name": "before ith element", "args": {"i": "int"}},
+                           {"name": "every ith element", "args": {"i": "int"}},
+                          ]}
+
 # Get the list of sources
 @app.get("/sources")
 async def get_sources():
