@@ -59,13 +59,16 @@ class Rulebook(BaseModel):
     rulesets: list[Ruleset]
 
 
+class Inventory(BaseModel):
+
+    inventory: str
 # globals
 
 enable = False
 ruleset = Ruleset(name="ifthisthenthat", rules=[], sources=[])
 rulebook = Rulebook(rulesets=[ruleset])
 extravars = {}
-inventory = ""
+inventory = Inventory(inventory='')
 rulebook_task = None
 log_lines = []
 
@@ -107,6 +110,23 @@ def build_rulebook():
     print(yaml.safe_dump(data, default_flow_style=False))
     return data
 
+def load_extravars():
+    global extravars
+
+    if os.path.exists("extravars.yml"):
+        with open("extravars.yml", "r") as f:
+            extravars = yaml.safe_load(f)
+
+            print(extravars)
+
+def load_inventory():
+    global inventory
+
+    if os.path.exists("inventory.yml"):
+        with open("inventory.yml", "r") as f:
+            inventory = Inventory(inventory=f.read())
+
+            print(inventory)
 
 def load_rulebook():
     global rulebook
@@ -148,6 +168,8 @@ def save_rulebook():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    load_extravars()
+    load_inventory()
     load_rulebook()
     yield
     save_rulebook()
@@ -226,16 +248,16 @@ async def get_extravars():
 
 # Set the inventory
 @app.post("/inventory")
-async def set_inventory(new_inventory: str):
+async def set_inventory(new_inventory: Inventory):
     global inventory
     inventory = new_inventory
-    return {"inventory": inventory}
+    return inventory
 
 
 # Get the inventory
 @app.get("/inventory")
 async def get_inventory():
-    return {"inventory": inventory}
+    return inventory
 
 # Get the rulebook
 @app.get("/rulebook")
@@ -285,7 +307,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     {
                         "type": "Inventory",
                         "data": base64.b64encode(
-                            inventory.encode("utf-8")
+                            inventory.inventory.encode("utf-8")
                         ).decode("utf-8"),
                     }
                 )
