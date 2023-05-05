@@ -1,1 +1,4 @@
 env.yml
+*.egg-info
+*.pyc
+.DS_Store
