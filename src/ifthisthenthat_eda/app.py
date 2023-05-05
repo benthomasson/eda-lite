@@ -189,21 +189,30 @@ app.add_middleware(
 )
 
 
-# Get the list of modules
-@app.get("/modules")
-async def get_modules():
+# Get the list of available modules
+@app.get("/available-modules")
+async def get_available_modules():
     return {"modules": ["community.general.slack"]}
+
+# Get the list of available sources
+@app.get("/available-sources")
+async def get_available_sources():
+    return {"sources": [{"name": "ansible.eda.range", "args": {"limit": "int", "delay": "int"}},
+                        {"name": "ansible.eda.webhook", "args": {}},
+                       ]}
+
 
 
 # Get the list of sources
 @app.get("/sources")
 async def get_sources():
-    return {
-        "sources": [
-            "ansible.eda.range",
-        ]
-    }
+    return {"sources": rulebook.rulesets[0].sources}
 
+
+# Get the list of rules
+@app.get("/rules")
+async def get_rules():
+    return {"rules": rulebook.rulesets[0].rules}
 
 # Enable rulebook
 @app.post("/enable")
