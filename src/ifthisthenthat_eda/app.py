@@ -4,10 +4,12 @@ import asyncio
 import base64
 import json
 import logging
+import os
 import shutil
 import uuid
-import starlette.websockets
+from contextlib import asynccontextmanager
 
+import starlette.websockets
 import yaml
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,23 +20,12 @@ logger = logging.getLogger(__name__)
 ssh_agent = shutil.which("ssh-agent")
 ansible_rulebook = shutil.which("ansible-rulebook")
 
-
-app = FastAPI(
-    title="If This Then That EDA",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# types
 
 
 class Action(BaseModel):
 
-    module_name: str
+    name: str
     module_args: dict
 
 
@@ -68,91 +59,18 @@ class Rulebook(BaseModel):
     rulesets: list[Ruleset]
 
 
+# globals
+
+enable = False
 ruleset = Ruleset(name="ifthisthenthat", rules=[], sources=[])
 rulebook = Rulebook(rulesets=[ruleset])
 extravars = {}
+inventory = ""
 rulebook_task = None
 log_lines = []
 
 
-# Get the list of modules
-@app.get("/modules")
-async def get_modules():
-    return {"modules": ["community.general.slack"]}
-
-
-# Get the list of sources
-@app.get("/sources")
-async def get_sources():
-    return {
-        "sources": [
-            "ansible.eda.range",
-        ]
-    }
-
-
-# Get the list of module conditions
-@app.get("/conditions")
-async def get_conditions():
-    return {"conditions": ["event.i == 1", "event.i == 2"]}
-
-
-# Add a source
-@app.post("/sources")
-async def add_source(source: Source):
-    ruleset.sources.append(source)
-    await run_rulebook()
-    return {"source": source}
-
-
-# Add a rule
-@app.post("/rules")
-async def add_rule(rule: Rule):
-    ruleset.rules.append(rule)
-    await run_rulebook()
-    return {"rule": rule}
-
-# Get log lines
-@app.get("/logs")
-async def get_logs():
-    return {"logs": log_lines}
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_text()
-            print("websocket:", data, type(data))
-            message = json.loads(data)
-            if message["type"] == "Worker":
-                await websocket.send_text(
-                    json.dumps(
-                        {
-                            "type": "ExtraVars",
-                            "data": base64.b64encode(
-                                yaml.safe_dump(extravars).encode("utf-8")
-                            ).decode("utf-8"),
-                        }
-                    )
-                )
-                await websocket.send_text(
-                    json.dumps(
-                        {
-                            "type": "Rulebook",
-                            "data": base64.b64encode(
-                                yaml.safe_dump(get_rulebook()).encode("utf-8")
-                            ).decode("utf-8"),
-                        }
-                    )
-                )
-                await websocket.send_text(json.dumps({"type": "EndOfResponse"}))
-    except starlette.websockets.WebSocketDisconnect as e:
-        logger.error("websocket_endpoint %s", e)
-        print("websocket_endpoint %s", e)
-
-
-def get_rulebook():
+def build_rulebook():
     data = []
     for ruleset in rulebook.rulesets:
         rules = []
@@ -163,7 +81,7 @@ def get_rulebook():
                     "condition": rule.condition.condition,
                     "action": {
                         "run_module": {
-                            "module_name": rule.action.module_name,
+                            "name": rule.action.name,
                             "module_args": rule.action.module_args,
                         }
                     },
@@ -186,20 +104,229 @@ def get_rulebook():
                 }
             )
 
-
-
     print(yaml.safe_dump(data, default_flow_style=False))
     return data
+
+
+def load_rulebook():
+    global rulebook
+    global rulesets
+    sources = []
+    rules = []
+
+    if os.path.exists("rulebook.yml"):
+        with open("rulebook.yml", "r") as f:
+            rulebook_data = yaml.safe_load(f)
+            print(yaml.safe_dump(rulebook_data, default_flow_style=False))
+            if not rulebook_data:
+                return
+            ruleset_data = rulebook_data[0]
+            for source in ruleset_data["sources"]:
+                source_type = list(source.keys())[0]
+                sources.append(Source(source_type=source_type,
+                                      source_args=source[source_type]))
+            for rule in ruleset_data["rules"]:
+                rules.append(Rule(name=rule["name"],
+                                  condition=Condition(condition=rule["condition"]),
+                                  action=Action(name=rule["action"]["run_module"]["name"],
+                                                module_args=rule["action"]["run_module"]["module_args"])))
+
+        ruleset = Ruleset(name="ifthisthenthat", rules=rules, sources=sources)
+        rulebook = Rulebook(rulesets=[ruleset])
+
+        print(rulebook)
+
+
+def save_rulebook():
+    global rulebook
+    with open("rulebook.yml", "w") as f:
+        yaml.safe_dump(build_rulebook(), f, default_flow_style=False)
+
+
+# API
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_rulebook()
+    yield
+    save_rulebook()
+
+
+app = FastAPI(
+    title="EDA: If This Then That",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Get the list of modules
+@app.get("/modules")
+async def get_modules():
+    return {"modules": ["community.general.slack"]}
+
+
+# Get the list of sources
+@app.get("/sources")
+async def get_sources():
+    return {
+        "sources": [
+            "ansible.eda.range",
+        ]
+    }
+
+
+# Enable rulebook
+@app.post("/enable")
+async def enable_rulebook():
+    global enable
+    if not enable:
+        enable = True
+        await run_rulebook()
+    return {"enable": enable}
+
+
+# Disable rulebook
+@app.post("/disable")
+async def disable_rulebook():
+    global enable
+    if enable:
+        enable = False
+        if rulebook_task:
+            await rulebook_task.cancel()
+    return {"enable": enable}
+
+
+# Get the list of module conditions
+@app.get("/conditions")
+async def get_conditions():
+    return {"conditions": ["event.i == 1", "event.i == 2"]}
+
+
+# Set the extravars
+@app.post("/extravars")
+async def set_extravars(new_extravars: dict):
+    global extravars
+    extravars = new_extravars
+    return {"extravars": extravars}
+
+
+# Get the extravars
+@app.get("/extravars")
+async def get_extravars():
+    return {"extravars": extravars}
+
+
+# Set the inventory
+@app.post("/inventory")
+async def set_inventory(new_inventory: str):
+    global inventory
+    inventory = new_inventory
+    return {"inventory": inventory}
+
+
+# Get the inventory
+@app.get("/inventory")
+async def get_inventory():
+    return {"inventory": inventory}
+
+# Get the rulebook
+@app.get("/rulebook")
+async def get_rulebook():
+    return build_rulebook()
+
+# Add a source
+@app.post("/sources")
+async def add_source(source: Source):
+    ruleset.sources.append(source)
+    save_rulebook()
+    if enable:
+        await run_rulebook()
+    return {"source": source}
+
+
+# Add a rule
+@app.post("/rules")
+async def add_rule(rule: Rule):
+    ruleset.rules.append(rule)
+    save_rulebook()
+    if enable:
+        await run_rulebook()
+    return {"rule": rule}
+
+
+# Get log lines
+@app.get("/logs")
+async def get_logs():
+    return {"logs": log_lines}
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    async def send(data):
+        await websocket.send_text(json.dumps(data))
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print("websocket:", data, type(data))
+            message = json.loads(data)
+            if message["type"] == "Worker":
+                await send(
+                    {
+                        "type": "Inventory",
+                        "data": base64.b64encode(
+                            inventory.encode("utf-8")
+                        ).decode("utf-8"),
+                    }
+                )
+                await send(
+                    {
+                        "type": "ExtraVars",
+                        "data": base64.b64encode(
+                            yaml.safe_dump(extravars).encode("utf-8")
+                        ).decode("utf-8"),
+                    }
+                )
+                await send(
+                    {
+                        "type": "Rulebook",
+                        "data": base64.b64encode(
+                            yaml.safe_dump(build_rulebook()).encode("utf-8")
+                        ).decode("utf-8"),
+                    }
+                )
+                await send({"type": "EndOfResponse"})
+    except starlette.websockets.WebSocketDisconnect as e:
+        logger.error("websocket_endpoint %s", e)
+        print("websocket_endpoint %s", e)
 
 
 # Run the rulebook
 async def run_rulebook():
 
     global rulebook_task
+    global log_lines
+
+    if rulebook_task:
+        rulebook_task.cancel()
+
+    if not enable:
+        return
+
+    log_lines = []
 
     activation_id = str(uuid.uuid4())
 
-    # for local development this is better
     cmd_args = [
         ansible_rulebook,
         "--worker",

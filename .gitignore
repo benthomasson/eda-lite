@@ -1,4 +1,7 @@
 env.yml
+extravars.yml
+rulebook.yml
+inventory.yml
 *.egg-info
 *.pyc
 .DS_Store
