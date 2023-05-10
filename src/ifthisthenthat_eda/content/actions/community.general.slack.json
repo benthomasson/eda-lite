@@ -1,0 +1,16 @@
+{
+  "name": "community.general.slack",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "msg": {
+        "type": "string",
+        "description": "The message to send"
+      },
+      "token": {
+        "type": "slack token",
+        "description": "Token to use with slack"
+      }
+    }
+  }
+}

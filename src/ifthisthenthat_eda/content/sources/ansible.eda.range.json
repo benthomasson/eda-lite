@@ -1,0 +1,17 @@
+{
+  "name": "ansible.eda.range",
+  "schema": {
+    "title": "ansible.eda.range",
+    "type": "object",
+    "properties": {
+      "limit": {
+        "type": "string",
+        "description": "Limit the number of event sent"
+      },
+      "delay": {
+        "type": "integer",
+        "description": "The delay in seconds between events"
+      }
+    }
+  }
+}

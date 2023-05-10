@@ -1,0 +1,5 @@
+{
+  "name": "second",
+  "schema": {},
+  "condition": "event.i == 1"
+}

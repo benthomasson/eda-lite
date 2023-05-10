@@ -1,0 +1,13 @@
+{
+  "name": "after",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "index": {
+        "type": "integer",
+        "description": "after index"
+      }
+    }
+  },
+  "condition": "event.i > {index}"
+}

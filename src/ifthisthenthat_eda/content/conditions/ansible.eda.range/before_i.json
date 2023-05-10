@@ -1,0 +1,13 @@
+{
+  "name": "before",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "index": {
+        "type": "integer",
+        "description": "before index"
+      }
+    }
+  },
+  "condition": "event.i == {index}"
+}
