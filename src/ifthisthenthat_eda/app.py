@@ -8,6 +8,7 @@ import os
 import shutil
 import uuid
 from contextlib import asynccontextmanager
+from importlib.resources import files
 
 import starlette.websockets
 import yaml
@@ -208,35 +209,36 @@ app.add_middleware(
 )
 
 
+def get_content(location):
+    content_files = files(location)
+    content_objects = []
+    for content_file in content_files.iterdir():
+        if not content_file.is_file():
+            continue
+        if not content_file.name.endswith(".json"):
+            continue
+        with open(content_file) as f:
+            content_object = json.loads(f.read())
+            content_objects.append(content_object)
+    return content_objects
+
 # Get the list of available modules
-@app.get("/available-modules")
-async def get_available_modules():
-    return {"modules": ["community.general.slack"]}
+@app.get("/available-actions")
+async def get_available_actions():
+    return {"actions": get_content('ifthisthenthat_eda.content.actions')}
 
 
 # Get the list of available sources
 @app.get("/available-sources")
 async def get_available_sources():
-    return {
-        "sources": [
-            {
-                "name": "ansible.eda.range",
-                "args": {"limit": "int", "delay": "int"},
-            },
-            {"name": "ansible.eda.webhook", "args": {}},
-        ]
-    }
+    return {"sources": get_content('ifthisthenthat_eda.content.sources')}
 
 
 # Get the list of available conditions for a given source
 @app.get("/available-conditions/{source}")
 async def get_available_conditions(source: str):
-    return {"conditions": [{"name": "first", "args": {}},
-                           {"name": "ith element", "args": {"i": "int"}},
-                           {"name": "after ith element", "args": {"i": "int"}},
-                           {"name": "before ith element", "args": {"i": "int"}},
-                           {"name": "every ith element", "args": {"i": "int"}},
-                          ]}
+    source = source.replace('.', '_')
+    return {"conditions": get_content(f'ifthisthenthat_eda.content.conditions.{source}')}
 
 # Get the list of sources
 @app.get("/sources")
