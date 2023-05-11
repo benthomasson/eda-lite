@@ -1,13 +1,13 @@
 {
-  "name": "before",
+  "name": "equal",
   "schema": {
     "type": "object",
     "properties": {
       "index": {
         "type": "integer",
-        "description": "before index"
+        "description": "equal index"
       }
     }
   },
-  "condition": "event.i < {index}"
+  "condition": "event.i == {index}"
 }
