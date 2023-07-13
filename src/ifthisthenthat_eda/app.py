@@ -68,8 +68,9 @@ class Inventory(BaseModel):
 # globals
 
 enable = False
+rulesets = []
 ruleset = Ruleset(name="ifthisthenthat", rules=[], sources=[])
-rulebook = Rulebook(rulesets=[ruleset])
+rulebook = Rulebook(rulesets=rulesets)
 extravars = {}
 inventory = Inventory(inventory="")
 rulebook_task = None
@@ -139,40 +140,41 @@ def load_inventory():
 def load_rulebook():
     global rulebook
     global rulesets
-    sources = []
-    rules = []
 
     if os.path.exists("rulebook.yml"):
         with open("rulebook.yml", "r") as f:
             rulebook_data = yaml.safe_load(f)
             print(yaml.safe_dump(rulebook_data, default_flow_style=False))
-            if not rulebook_data:
+            if not rulebook_data or not isinstance(rulebook_data, list):
                 return
-            ruleset_data = rulebook_data[0]
-            for source in ruleset_data["sources"]:
-                source_type = list(source.keys())[0]
-                sources.append(
-                    Source(
-                        source_type=source_type,
-                        source_args=source[source_type],
+            for ruleset_data in rulebook_data:
+                sources = []
+                rules = []
+                name = ruleset_data.get('name', '')
+                for source in ruleset_data["sources"]:
+                    source_type = list(source.keys())[0]
+                    sources.append(
+                        Source(
+                            source_type=source_type,
+                            source_args=source[source_type],
+                        )
                     )
-                )
-            for rule in ruleset_data["rules"]:
-                rules.append(
-                    Rule(
-                        name=rule["name"],
-                        condition=Condition(condition=rule["condition"]),
-                        action=Action(
-                            name=rule["action"]["run_module"]["name"],
-                            module_args=rule["action"]["run_module"][
-                                "module_args"
-                            ],
-                        ),
+                for rule in ruleset_data["rules"]:
+                    rules.append(
+                        Rule(
+                            name=rule["name"],
+                            condition=Condition(condition=rule["condition"]),
+                            action=Action(
+                                name=rule["action"]["run_module"]["name"],
+                                module_args=rule["action"]["run_module"][
+                                    "module_args"
+                                ],
+                            ),
+                        )
                     )
-                )
+                rulesets.append(Ruleset(name=name, sources=sources, rules=rules))
 
-        ruleset = Ruleset(name="ifthisthenthat", rules=rules, sources=sources)
-        rulebook = Rulebook(rulesets=[ruleset])
+        rulebook = Rulebook(rulesets=rulesets)
 
         print(rulebook)
 
@@ -240,16 +242,15 @@ async def get_available_conditions(source: str):
     source = source.replace('.', '_')
     return {"conditions": get_content(f'ifthisthenthat_eda.content.conditions.{source}')}
 
-# Get the list of sources
-@app.get("/sources")
-async def get_sources():
-    return {"sources": rulebook.rulesets[0].sources}
+
+@app.get("/rulesets")
+async def get_rulesets():
+    return {"rulesets": rulesets}
 
 
-# Get the list of rules
-@app.get("/rules")
-async def get_rules():
-    return {"rules": rulebook.rulesets[0].rules}
+@app.post("/ruleset")
+async def add_ruleset(ruleset: Ruleset):
+    rulesets.append(ruleset)
 
 
 # Enable rulebook
@@ -311,26 +312,6 @@ async def get_inventory():
 @app.get("/rulebook")
 async def get_rulebook():
     return build_rulebook()
-
-
-# Add a source
-@app.post("/sources")
-async def add_source(source: Source):
-    ruleset.sources.append(source)
-    save_rulebook()
-    if enable:
-        await run_rulebook()
-    return {"source": source}
-
-
-# Add a rule
-@app.post("/rules")
-async def add_rule(rule: Rule):
-    ruleset.rules.append(rule)
-    save_rulebook()
-    if enable:
-        await run_rulebook()
-    return {"rule": rule}
 
 
 # Get log lines
