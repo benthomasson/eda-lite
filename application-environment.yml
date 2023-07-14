@@ -1,0 +1,27 @@
+---
+version: 3
+
+dependencies:
+  ansible_core:
+    package_pip: ansible-core
+  ansible_runner:
+    package_pip: ansible-runner
+
+images:
+  base_image:
+    name: quay.io/bthomass/ansible-rulebook:ifthisthenthat
+
+additional_build_files:
+  - src: pyproject.toml
+    dest: app
+  - src: src
+    dest: app/src
+
+additional_build_steps:
+  append_final:
+    - COPY _build/app .
+    - RUN pip install -e .
+
+options:
+  container_init:
+    entrypoint: "uvicorn ifthisthenthat_eda.app:app --host 0.0.0.0 --port 8000"
