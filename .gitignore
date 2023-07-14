@@ -5,3 +5,4 @@ inventory.yml
 *.egg-info
 *.pyc
 .DS_Store
+/context

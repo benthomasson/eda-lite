@@ -24,4 +24,4 @@ additional_build_steps:
 
 options:
   container_init:
-    entrypoint: "uvicorn ifthisthenthat_eda.app:app --host 0.0.0.0 --port 8000"
+    cmd: "uvicorn ifthisthenthat_eda.app:app --host 0.0.0.0 --port 8000"
