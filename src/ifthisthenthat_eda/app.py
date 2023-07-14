@@ -69,8 +69,6 @@ class Inventory(BaseModel):
 
 enable = False
 rulesets = []
-ruleset = Ruleset(name="ifthisthenthat", rules=[], sources=[])
-rulebook = Rulebook(rulesets=rulesets)
 extravars = {}
 inventory = Inventory(inventory="")
 rulebook_task = None
@@ -80,8 +78,13 @@ actions = []
 
 
 def build_rulebook():
+    global rulesets
+
+    print("build_rulebook")
+    print("rulesets:", rulesets)
+
     data = []
-    for ruleset in rulebook.rulesets:
+    for ruleset in rulesets:
         rules = []
         for rule in ruleset.rules:
             rules.append(
@@ -138,7 +141,6 @@ def load_inventory():
 
 
 def load_rulebook():
-    global rulebook
     global rulesets
 
     if os.path.exists("rulebook.yml"):
@@ -174,13 +176,10 @@ def load_rulebook():
                     )
                 rulesets.append(Ruleset(name=name, sources=sources, rules=rules))
 
-        rulebook.rulesets=rulesets
-
-        print(rulebook)
+        print(rulesets)
 
 
 def save_rulebook():
-    global rulebook
     with open("rulebook.yml", "w") as f:
         yaml.safe_dump(build_rulebook(), f, default_flow_style=False)
 
@@ -274,12 +273,6 @@ async def disable_rulebook():
     return {"enable": enable}
 
 
-# Get the list of module conditions
-@app.get("/conditions")
-async def get_conditions():
-    return {"conditions": ["event.i == 1", "event.i == 2"]}
-
-
 # Set the extravars
 @app.post("/extravars")
 async def set_extravars(new_extravars: dict):
@@ -311,6 +304,7 @@ async def get_inventory():
 # Get the rulebook
 @app.get("/rulebook")
 async def get_rulebook():
+    print("get_rulebook")
     return build_rulebook()
 
 
