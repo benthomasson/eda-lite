@@ -174,7 +174,7 @@ def load_rulebook():
                     )
                 rulesets.append(Ruleset(name=name, sources=sources, rules=rules))
 
-        rulebook = Rulebook(rulesets=rulesets)
+        rulebook.rulesets=rulesets
 
         print(rulebook)
 
