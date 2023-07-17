@@ -32,5 +32,11 @@ aa-push:
 aa-run:
 	docker run -it --rm -p 8000:8000 $(AA_IMAGE_NAME):$(AA_IMAGE_TAG)
 
+aa-run2:
+	docker run -it --rm -p 8000:8000 -eDEFAULT_LOCAL_TMP=/tmp -v${PWD}/rulebook.yml:/runner/rulebook.yml -v${PWD}/inventory.yml:/runner/inventory.yml -v${PWD}/extravars.yml:/runner/extravars.yml $(AA_IMAGE_NAME):$(AA_IMAGE_TAG)
+
 aa-shell:
 	docker run -it --rm $(AA_IMAGE_NAME):$(AA_IMAGE_TAG) /bin/bash
+
+aa-shell2:
+	docker run -it --rm -p 8000:8000 -eANSIBLE_LOCAL_TMP=/tmp -v${PWD}/rulebook.yml:/runner/rulebook.yml -v${PWD}/inventory.yml:/runner/inventory.yml -v${PWD}/extravars.yml:/runner/extravars.yml $(AA_IMAGE_NAME):$(AA_IMAGE_TAG) /bin/bash
