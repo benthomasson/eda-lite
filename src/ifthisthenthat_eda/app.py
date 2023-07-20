@@ -14,6 +14,7 @@ import starlette.websockets
 import yaml
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ def load_rulebook():
             for ruleset_data in rulebook_data:
                 sources = []
                 rules = []
-                name = ruleset_data.get('name', '')
+                name = ruleset_data.get("name", "")
                 for source in ruleset_data["sources"]:
                     source_type = list(source.keys())[0]
                     sources.append(
@@ -174,7 +175,9 @@ def load_rulebook():
                             ),
                         )
                     )
-                rulesets.append(Ruleset(name=name, sources=sources, rules=rules))
+                rulesets.append(
+                    Ruleset(name=name, sources=sources, rules=rules)
+                )
 
         print(rulesets)
 
@@ -223,23 +226,28 @@ def get_content(location):
             content_objects.append(content_object)
     return content_objects
 
+
 # Get the list of available modules
 @app.get("/available-actions")
 async def get_available_actions():
-    return {"actions": get_content('ifthisthenthat_eda.content.actions')}
+    return {"actions": get_content("ifthisthenthat_eda.content.actions")}
 
 
 # Get the list of available sources
 @app.get("/available-sources")
 async def get_available_sources():
-    return {"sources": get_content('ifthisthenthat_eda.content.sources')}
+    return {"sources": get_content("ifthisthenthat_eda.content.sources")}
 
 
 # Get the list of available conditions for a given source
 @app.get("/available-conditions/{source}")
 async def get_available_conditions(source: str):
-    source = source.replace('.', '_')
-    return {"conditions": get_content(f'ifthisthenthat_eda.content.conditions.{source}')}
+    source = source.replace(".", "_")
+    return {
+        "conditions": get_content(
+            f"ifthisthenthat_eda.content.conditions.{source}"
+        )
+    }
 
 
 @app.get("/rulesets")
@@ -269,7 +277,11 @@ async def disable_rulebook():
     if enable:
         enable = False
         if rulebook_task:
-            await rulebook_task.cancel()
+            rulebook_task.cancel()
+            try:
+                await rulebook_task
+            except asyncio.CancelledError:
+                pass
     return {"enable": enable}
 
 
@@ -445,3 +457,6 @@ async def read_output(proc, activation_instance_id):
     finally:
         logger.info("read_output complete")
         print("read_output complete")
+
+
+app.mount("/", StaticFiles(directory="ui", html=True), name="ui")

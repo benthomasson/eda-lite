@@ -6,3 +6,4 @@ inventory.yml
 *.pyc
 .DS_Store
 /context
+/ui
