@@ -9,6 +9,7 @@ import shutil
 import uuid
 from contextlib import asynccontextmanager
 from importlib.resources import files
+import datetime
 
 import starlette.websockets
 import yaml
@@ -20,49 +21,46 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 ssh_agent = shutil.which("ssh-agent")
+if ssh_agent is None:
+    raise Exception("ssh-agent not found")
 ansible_rulebook = shutil.which("ansible-rulebook")
+if ansible_rulebook is None:
+    raise Exception("ansible-rulebook not found")
 
 # types
 
 
 class Action(BaseModel):
-
     name: str
     module_args: dict
 
 
 class Condition(BaseModel):
-
     condition: str
 
 
 class Rule(BaseModel):
-
     name: str
     condition: Condition
     action: Action
 
 
 class Source(BaseModel):
-
     source_type: str
     source_args: dict
 
 
 class Ruleset(BaseModel):
-
     name: str
     rules: list[Rule]
     sources: list[Source]
 
 
 class Rulebook(BaseModel):
-
     rulesets: list[Ruleset]
 
 
 class Inventory(BaseModel):
-
     inventory: str
 
 
@@ -76,6 +74,7 @@ rulebook_task = None
 log_lines = []
 events = []
 actions = []
+payloads = []
 
 
 def build_rulebook():
@@ -338,6 +337,21 @@ async def get_events():
     return {"events": events}
 
 
+# Post payloads
+@app.post("/payloads")
+async def add_payloads(payload: dict):
+    payloads.append(
+        {"payload": payload, "timestamp": str(datetime.datetime.now())}
+    )
+    return {"payloads": payloads}
+
+
+# Get payloads
+@app.get("/payloads")
+async def get_payloads():
+    return payloads
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -387,7 +401,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # Run the rulebook
 async def run_rulebook():
-
     global rulebook_task
     global log_lines
     global actions
@@ -435,7 +448,6 @@ async def run_rulebook():
 
 
 async def read_output(proc, activation_instance_id):
-
     try:
         logger.debug(
             "read_output %s %s",
