@@ -1,4 +1,5 @@
 env.yml
+.env
 extravars.yml
 rulebook.yml
 inventory.yml
@@ -10,3 +11,4 @@ inventory.yml
 *.pem
 *.key
 *.crt
+user_db.json

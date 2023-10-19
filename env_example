@@ -1,0 +1,2 @@
+secret_key='xxx'
+users_db_path='user_db.json'
