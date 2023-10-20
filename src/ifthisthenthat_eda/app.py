@@ -422,10 +422,12 @@ async def run_rulebook():
         ansible_rulebook,
         "--worker",
         "--websocket-address",
-        "ws://localhost:8000/ws",
+        "wss://localhost:8000/ws",
         "--id",
         str(activation_id),
         "-vvv",
+        "--websocket-ssl-verify",
+        "no",
     ]
     logger.debug(ansible_rulebook)
     print(ansible_rulebook)

@@ -15,7 +15,7 @@ push:
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 
 run:
-	docker run -it --rm -p 8000:8000 $(IMAGE_NAME):$(IMAGE_TAG)
+	docker run -it --rm -p 8000:8000 -v${PWD}/certs/localhost.key:/etc/ssl/certs/ssl-cert.key -v${PWD}/certs/localhost.crt:/etc/ssl/certs/ssl-cert.crt -v${PWD}/inventory.yml:/opt/app-root/src/eda-ifthisthenthat/inventory.yml $(IMAGE_NAME):$(IMAGE_TAG)
 
 run2:
 	docker run -it --rm -p 8000:8000 -v${PWD}/rulebook.yml:/opt/app-root/src/eda-ifthisthenthat/rulebook.yml -v${PWD}/inventory.yml:/opt/app-root/src/eda-ifthisthenthat/inventory.yml -v${PWD}/extravars.yml:/opt/app-root/src/eda-ifthisthenthat/extravars.yml $(IMAGE_NAME):$(IMAGE_TAG)
