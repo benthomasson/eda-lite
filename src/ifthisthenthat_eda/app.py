@@ -19,16 +19,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from .config import settings
 
 from .auth import (
     Token,
     User,
     authenticate_user,
     create_access_token,
-    fake_users_db,
     get_current_active_user,
+    users_db,
 )
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -256,9 +256,10 @@ async def get_available_sources(
 
 # Get the list of available conditions for a given source
 @app.get("/available-conditions/{source}")
-async def get_available_conditions(source: str,
-    current_user: Annotated[User, Depends(get_current_active_user)]
-                                  ):
+async def get_available_conditions(
+    source: str,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     source = source.replace(".", "_")
     return {
         "conditions": get_content(
@@ -275,9 +276,10 @@ async def get_rulesets(
 
 
 @app.post("/ruleset")
-async def add_ruleset(ruleset: Ruleset, 
-    current_user: Annotated[User, Depends(get_current_active_user)]
-                     ):
+async def add_ruleset(
+    ruleset: Ruleset,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     rulesets.append(ruleset)
 
 
@@ -312,9 +314,10 @@ async def disable_rulebook(
 
 # Set the extravars
 @app.post("/extravars")
-async def set_extravars(new_extravars: dict,
-    current_user: Annotated[User, Depends(get_current_active_user)]
-                       ):
+async def set_extravars(
+    new_extravars: dict,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     global extravars
     extravars = new_extravars
     return {"extravars": extravars}
@@ -330,9 +333,10 @@ async def get_extravars(
 
 # Set the inventory
 @app.post("/inventory")
-async def set_inventory(new_inventory: Inventory,
-    current_user: Annotated[User, Depends(get_current_active_user)]
-                       ):
+async def set_inventory(
+    new_inventory: Inventory,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     global inventory
     inventory = new_inventory
     return inventory
@@ -381,9 +385,10 @@ async def get_events(
 
 # Post payloads
 @app.post("/payloads")
-async def add_payloads(payload: dict,
-    current_user: Annotated[User, Depends(get_current_active_user)]
-                      ):
+async def add_payloads(
+    payload: dict,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     payloads.append({"payload": payload, "timestamp": str(datetime.now())})
     return {"payloads": payloads}
 
@@ -521,16 +526,16 @@ async def read_output(proc, activation_instance_id):
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ):
-    user = authenticate_user(
-        fake_users_db, form_data.username, form_data.password
-    )
+    user = authenticate_user(users_db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token_expires = timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
@@ -542,7 +547,6 @@ async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     return current_user
-
 
 
 app.mount("/", StaticFiles(directory="ui", html=True), name="ui")

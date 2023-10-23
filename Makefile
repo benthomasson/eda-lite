@@ -5,6 +5,7 @@ IMAGE_NAME=quay.io/bthomass/eda-ifthisthenthat
 IMAGE_TAG=latest
 AA_IMAGE_NAME=quay.io/bthomass/eda-ifthisthenthat-aa
 AA_IMAGE_TAG=latest
+APP_ROOT=/opt/app-root/src/eda-ifthisthenthat
 
 all: build push
 
@@ -15,7 +16,7 @@ push:
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 
 run:
-	docker run -it --rm -p 8000:8000 -v${PWD}/certs/localhost.key:/etc/ssl/certs/ssl-cert.key -v${PWD}/certs/localhost.crt:/etc/ssl/certs/ssl-cert.crt -v${PWD}/inventory.yml:/opt/app-root/src/eda-ifthisthenthat/inventory.yml $(IMAGE_NAME):$(IMAGE_TAG)
+	docker run -it --rm -p 8000:8000 -v${PWD}/certs/localhost.key:/etc/ssl/certs/ssl-cert.key -v${PWD}/certs/localhost.crt:/etc/ssl/certs/ssl-cert.crt -v${PWD}/inventory.yml:/opt/app-root/src/eda-ifthisthenthat/inventory.yml -v${PWD}/.env:/opt/app-root/src/eda-ifthisthenthat/.env -v${PWD}/user_db.json:${APP_ROOT}/user_db.json $(IMAGE_NAME):$(IMAGE_TAG) 
 
 run2:
 	docker run -it --rm -p 8000:8000 -v${PWD}/rulebook.yml:/opt/app-root/src/eda-ifthisthenthat/rulebook.yml -v${PWD}/inventory.yml:/opt/app-root/src/eda-ifthisthenthat/inventory.yml -v${PWD}/extravars.yml:/opt/app-root/src/eda-ifthisthenthat/extravars.yml $(IMAGE_NAME):$(IMAGE_TAG)
