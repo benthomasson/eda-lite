@@ -474,7 +474,7 @@ async def run_rulebook():
         "wss://localhost:8000/ws",
         "--id",
         str(activation_id),
-        "-vvv",
+        "-v",
         "--websocket-ssl-verify",
         "no",
     ]
