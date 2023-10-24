@@ -10,7 +10,7 @@ APP_ROOT=/opt/app-root/src/eda-ifthisthenthat
 all: build push
 
 build:
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -platform linux/amd64 .
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) --platform linux/amd64 .
 
 push:
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
