@@ -26,6 +26,7 @@ from .auth import (
     authenticate_user,
     create_access_token,
     get_current_active_user,
+    get_websocket_user,
     users_db,
 )
 from .config import settings
@@ -418,6 +419,16 @@ async def websocket_endpoint(websocket: WebSocket):
             if message["type"] == "Action":
                 actions.append(message)
             if message["type"] == "Worker":
+                if not message.get("token"):
+                    await send({"type": "Error", "msg": "No worker token"})
+                    return
+                user = get_websocket_user(message["token"])
+                if not user:
+                    await send({"type": "Error", "msg": "Unknown worker"})
+                    return
+                if user.disabled:
+                    await send({"type": "Error", "msg": "Worker disabled"})
+                    return
                 await send(
                     {
                         "type": "Inventory",
@@ -477,6 +488,8 @@ async def run_rulebook():
         "-v",
         "--websocket-ssl-verify",
         "no",
+        "--token",
+        create_access_token(data={"sub": settings.worker_username}),
     ]
     logger.debug(ansible_rulebook)
     print(ansible_rulebook)
