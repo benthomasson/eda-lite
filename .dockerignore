@@ -4,3 +4,10 @@ rulebook.yml
 inventory.yml
 context
 build
+.env
+.git
+.dockerignore
+.gitignore
+user_db.json
+
+
