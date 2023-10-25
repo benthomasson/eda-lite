@@ -116,6 +116,7 @@ def build_rulebook():
             sources.append(
                 {
                     source.source_type: source.source_args,
+                    "filters": [ {"benthomasson.eda.poster": { "webhook_url": "https://localhost:8000/payloads" } } ]
                 }
             )
             data.append(
@@ -387,10 +388,9 @@ async def get_events(
 @app.post("/payloads")
 async def add_payloads(
     payload: dict,
-    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    payloads.append({"payload": payload, "timestamp": str(datetime.now())})
-    return {"payloads": payloads}
+    payloads.append({"event": payload, "timestamp": str(datetime.now())})
+    return "ok"
 
 
 # Get payloads
@@ -398,7 +398,7 @@ async def add_payloads(
 async def get_payloads(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    return payloads
+    return {"events": payloads}
 
 
 @app.websocket("/ws")
