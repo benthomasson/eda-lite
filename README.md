@@ -1,7 +1,16 @@
 
-# If-this-then-that EDA Demo
+# EDA-Lite
 
-Build a rulebook from a UI and run it stand-alone using only run\_module.
+Event Driven Ansible in a single container.
+
+This combines a ansible-rulebook, ansible-playbook, and a webserver in the same container.
+
+This is intended to be used as an embedable form of EDA or a development environment for running
+rules.
+
+
+
+
 
 
 
